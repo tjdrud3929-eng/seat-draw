@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>우리 반 자리 뽑기</title>
+  <meta name="claude:viewport-fit-sides" content="cover">
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      --bg: #f8f9ff;
+      --card: rgb(255 255 255 / 90%);
+      --text: #20243a;
+      --muted: #72768b;
+      --line: #e7e8f3;
+      --seat: #ffffff;
+      --seat-filled: #f3f2ff;
+      --accent: #6258e8;
+      --accent-dark: #4a40c8;
+      --lock: #f59e0b;
+      --lock-bg: #fff7e6;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #14162a;
+        --card: rgb(30 33 58 / 92%);
+        --text: #eceefe;
+        --muted: #a2a6c4;
+        --line: #343860;
+        --seat: #1d2040;
+        --seat-filled: #2a2766;
+        --accent: #8a82ff;
+        --accent-dark: #a9a3ff;
+        --lock-bg: #3a2e12;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #14162a;
+      --card: rgb(30 33 58 / 92%);
+      --text: #eceefe;
+      --muted: #a2a6c4;
+      --line: #343860;
+      --seat: #1d2040;
+      --seat-filled: #2a2766;
+      --accent: #8a82ff;
+      --accent-dark: #a9a3ff;
+      --lock-bg: #3a2e12;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding-block: 36px 48px;
+      padding-left: max(16px, env(safe-area-inset-left, 0px));
+      padding-right: max(16px, env(safe-area-inset-right, 0px));
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    main { width: min(100%, 680px); margin: 0 auto; text-align: center; }
+
+    .eyebrow { margin: 0 0 8px; color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .14em; }
+    h1 { margin: 0; font-size: clamp(1.9rem, 7vw, 2.8rem); letter-spacing: -0.05em; }
+    .subtitle { margin: 10px 0 22px; color: var(--muted); font-size: .95rem; line-height: 1.5; }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 16px;
+    }
+    .chip {
+      padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px;
+      background: var(--card); color: var(--text); font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
+    }
+    .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .classroom {
+      padding: clamp(16px, 5vw, 30px);
+      border: 1px solid var(--line); border-radius: 28px;
+      background: var(--card);
+      box-shadow: 0 20px 60px rgb(52 57 112 / 9%);
+      display: flex; flex-direction: column; gap: 22px;
+    }
+    .classroom.teacher { flex-direction: column-reverse; }
+
+    .front {
+      width: min(72%, 340px); margin: 0 auto; padding: 10px;
+      border: 1px solid var(--line); border-radius: 12px;
+      background: var(--seat); color: var(--muted);
+      font-size: .78rem; font-weight: 700; letter-spacing: .16em;
+    }
+
+    .seats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(7px, 2.4vw, 14px); }
+
+    .seat {
+      position: relative; display: grid; place-items: center; aspect-ratio: 1;
+      border: 2px solid var(--line); border-radius: 18px;
+      background: var(--seat); color: var(--muted);
+      font: inherit; padding: 0; cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+    .seat:hover { transform: translateY(-2px); }
+    .seat .number { color: var(--accent-dark); font-size: clamp(1.2rem, 5.5vw, 2rem); font-weight: 800; line-height: 1; }
+    .seat .empty { font-size: clamp(1rem, 4vw, 1.4rem); font-weight: 800; opacity: .35; }
+    .seat.filled { background: var(--seat-filled); border-color: transparent; }
+    .seat.pop { animation: pop 320ms ease both; }
+    .seat.rolling .number { color: var(--muted); }
+    .seat.locked { background: var(--lock-bg); border-color: var(--lock); }
+    .seat.locked::after { content: "🔒"; position: absolute; top: 4px; right: 6px; font-size: .75rem; }
+    .seat.next { border-color: var(--accent); border-style: dashed; }
+
+    @keyframes pop {
+      0% { transform: scale(.7); opacity: .3; }
+      70% { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 22px; }
+    .btn {
+      min-width: 150px; padding: 14px 22px; border: 0; border-radius: 14px;
+      background: var(--accent); color: #fff; font: inherit; font-size: 1rem; font-weight: 800; cursor: pointer;
+      box-shadow: 0 8px 18px rgb(98 88 232 / 25%);
+      transition: transform 160ms ease, background 160ms ease;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); background: var(--accent-dark); }
+    .btn.secondary { background: var(--card); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    button:focus-visible { outline: 3px solid #aaa5ff; outline-offset: 3px; }
+
+    .status { min-height: 1.5em; margin: 14px 0 0; color: var(--muted); font-size: .9rem; }
+    .help { margin-top: 18px; color: var(--muted); font-size: .8rem; line-height: 1.6; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .toolbar, .actions, .status, .help, .subtitle, .eyebrow { display: none; }
+      .classroom { box-shadow: none; border: 0; }
+      .seat { border: 2px solid #999 !important; background: #fff !important; }
+      .seat.locked::after { content: ""; }
+      .seat .number { color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">CLASSROOM SEAT DRAW</p>
+    <h1>우리 반 자리 뽑기</h1>
+    <p class="subtitle">1번부터 25번까지, 두근두근 새 자리를 뽑아요!</p>
+
+    <div class="toolbar">
+      <button class="chip" id="viewToggle" type="button" aria-pressed="false">👀 학생 시점</button>
+      <button class="chip" id="lockToggle" type="button" aria-pressed="false">🔒 자리 고정 모드</button>
+    </div>
+
+    <section class="classroom" id="classroom" aria-label="교실 자리 배치">
+      <div class="front" id="front">칠 판 · 교 탁</div>
+      <div class="seats" id="seats"></div>
+    </section>
+
+    <div class="actions">
+      <button class="btn" id="drawAll" type="button">🎲 한 번에 뽑기</button>
+      <button class="btn" id="drawOne" type="button">✨ 한 명씩 뽑기</button>
+      <button class="btn secondary" id="resetBtn" type="button">처음으로</button>
+      <button class="btn secondary" id="printBtn" type="button">🖨️ 인쇄</button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+
+    <p class="help">
+      🔒 <b>자리 고정 모드</b>를 켜고 자리를 누르면 그 학생은 다음 뽑기에도 그 자리에 그대로 있어요.<br>
+      (예: 시력 때문에 앞자리가 필요한 학생) · 마지막 결과는 자동으로 저장돼요.
+    </p>
+  </main>
+
+  <script>
+    const TOTAL = 25;
+    const COLS = 5;
+    const STORAGE_KEY = "seat-draw-v2";
+
+    const $ = (s) => document.querySelector(s);
+    const seatsEl = $("#seats");
+    const statusEl = $("#status");
+    const classroomEl = $("#classroom");
+    const drawAllBtn = $("#drawAll");
+    const drawOneBtn = $("#drawOne");
+    const lockToggle = $("#lockToggle");
+    const viewToggle = $("#viewToggle");
+
+    // seats[i] = 학생 번호 또는 null. i는 칠판 기준(앞줄 왼쪽부터) 자리 순서
+    let state = { seats: Array(TOTAL).fill(null), locked: Array(TOTAL).fill(false), teacherView: false };
+    let lockMode = false;
+    let busy = false;
+    // 한 명씩 뽑기 진행 상황
+    let stepQueue = null;
+
+    function load() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && saved.seats?.length === TOTAL) state = { ...state, ...saved };
+      } catch (e) { /* 저장 불가 환경이면 무시 */ }
+    }
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // 화면에 그릴 자리 순서 (교사 시점이면 180도 뒤집기)
+    function displayOrder() {
+      const order = Array.from({ length: TOTAL }, (_, i) => i);
+      return state.teacherView ? order.reverse() : order;
+    }
+
+    function render(popIndexes = []) {
+      seatsEl.replaceChildren(...displayOrder().map((i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "seat";
+        const num = state.seats[i];
+        const row = Math.floor(i / COLS) + 1, col = (i % COLS) + 1;
+        if (num !== null) {
+          btn.classList.add("filled");
+          btn.innerHTML = `<span class="number">${num}</span>`;
+          btn.setAttribute("aria-label", `${row}줄 ${col}번째 자리, ${num}번 학생${state.locked[i] ? ", 고정됨" : ""}`);
+        } else {
+          btn.innerHTML = `<span class="empty">?</span>`;
+          btn.setAttribute("aria-label", `${row}줄 ${col}번째 자리, 비어 있음`);
+        }
+        if (state.locked[i]) btn.classList.add("locked");
+        if (stepQueue && stepQueue.seatOrder[0] === i) btn.classList.add("next");
+        if (popIndexes.includes(i)) btn.classList.add("pop");
+        btn.dataset.index = i;
+        btn.addEventListener("click", () => onSeatClick(i));
+        return btn;
+      }));
+    }
+
+    function onSeatClick(i) {
+      if (!lockMode || busy) return;
+      if (state.seats[i] === null) {
+        setStatus("번호가 있는 자리만 고정할 수 있어요. 먼저 뽑아 주세요!");
+        return;
+      }
+      state.locked[i] = !state.locked[i];
+      save();
+      render();
+      const n = state.locked.filter(Boolean).length;
+      setStatus(state.locked[i] ? `${state.seats[i]}번 자리를 고정했어요. (고정 ${n}명)` : `${state.seats[i]}번 고정을 풀었어요. (고정 ${n}명)`);
+    }
+
+    function setStatus(t) { statusEl.textContent = t; }
+
+    function setBusy(b) {
+      busy = b;
+      drawAllBtn.disabled = b;
+      drawOneBtn.disabled = b;
+      $("#resetBtn").disabled = b;
+    }
+
+    // 고정되지 않은 자리와, 고정되지 않은 학생 목록
+    function freePools() {
+      const lockedNums = new Set(state.seats.filter((n, i) => state.locked[i] && n !== null));
+      const freeSeats = [];
+      for (let i = 0; i < TOTAL; i++) if (!state.locked[i]) freeSeats.push(i);
+      const freeNums = [];
+      for (let n = 1; n <= TOTAL; n++) if (!lockedNums.has(n)) freeNums.push(n);
+      return { freeSeats, freeNums };
+    }
+
+    // 🎲 한 번에 뽑기: 숫자가 마구 돌다가 멈춤
+    function drawAll() {
+      if (busy) return;
+      stepQueue = null;
+      const { freeSeats, freeNums } = freePools();
+      const result = shuffle([...freeNums]);
+      setBusy(true);
+      setStatus("두구두구두구… 🥁");
+
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const duration = reduce ? 0 : 1600;
+      const start = performance.now();
+
+      function tick(now) {
+        const elapsed = now - start;
+        if (elapsed < duration) {
+          const fake = shuffle([...freeNums]);
+          freeSeats.forEach((s, k) => (state.seats[s] = fake[k]));
+          render();
+          seatsEl.querySelectorAll(".seat:not(.locked)").forEach((el) => el.classList.add("rolling"));
+          // 끝으로 갈수록 느려지게
+          const delay = 50 + (elapsed / duration) * 180;
+          setTimeout(() => requestAnimationFrame(tick), delay);
+        } else {
+          freeSeats.forEach((s, k) => (state.seats[s] = result[k]));
+          save();
+          render(freeSeats);
+          setBusy(false);
+          drawAllBtn.textContent = "🎲 다시 뽑기";
+          setStatus("🎉 새 자리 배치가 완성됐어요!");
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // ✨ 한 명씩 뽑기: 앞자리부터 한 자리씩 공개
+    function drawOne() {
+      if (busy) return;
+      if (!stepQueue) {
+        const { freeSeats, freeNums } = freePools();
+        freeSeats.forEach((s) => (state.seats[s] = null));
+        stepQueue = { seatOrder: freeSeats, nums: shuffle([...freeNums]), total: freeSeats.length };
+        drawAllBtn.textContent = "🎲 한 번에 뽑기";
+      }
+      const seat = stepQueue.seatOrder.shift();
+      const num = stepQueue.nums.shift();
+
+      setBusy(true);
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let spins = reduce ? 0 : 14;
+      const pool = [...stepQueue.nums, num];
+
+      function spin() {
+        if (spins-- > 0) {
+          state.seats[seat] = pool[Math.floor(Math.random() * pool.length)];
+          render();
+          const el = seatsEl.querySelector(`[data-index="${seat}"]`);
+          el.classList.add("rolling");
+          setTimeout(spin, 60 + (14 - spins) * 8);
+          return;
+        }
+        state.seats[seat] = num;
+        const done = stepQueue.seatOrder.length === 0;
+        const count = stepQueue.total - stepQueue.seatOrder.length;
+        if (done) stepQueue = null;
+        save();
+        render([seat]);
+        setBusy(false);
+        const row = Math.floor(seat / COLS) + 1, col = (seat % COLS) + 1;
+        setStatus(done
+          ? `🎉 ${row}줄 ${col}번째 자리는 ${num}번! 모든 자리가 정해졌어요!`
+          : `${row}줄 ${col}번째 자리는… ${num}번! (${count}/${count + (stepQueue?.seatOrder.length ?? 0)})`);
+        drawOneBtn.textContent = done ? "✨ 한 명씩 뽑기" : "✨ 다음 자리";
+      }
+      spin();
+    }
+
+    function reset() {
+      if (busy) return;
+      const resetBtn = $("#resetBtn");
+      if (state.seats.some((n) => n !== null) && !resetBtn.dataset.armed) {
+        resetBtn.dataset.armed = "1";
+        resetBtn.textContent = "정말 지울까요?";
+        setStatus("한 번 더 누르면 자리 배치와 고정이 모두 지워져요.");
+        clearTimeout(reset.timer);
+        reset.timer = setTimeout(() => { delete resetBtn.dataset.armed; resetBtn.textContent = "처음으로"; }, 3000);
+        return;
+      }
+      clearTimeout(reset.timer);
+      delete resetBtn.dataset.armed;
+      resetBtn.textContent = "처음으로";
+      stepQueue = null;
+      state.seats = Array(TOTAL).fill(null);
+      state.locked = Array(TOTAL).fill(false);
+      save();
+      render();
+      drawAllBtn.textContent = "🎲 한 번에 뽑기";
+      drawOneBtn.textContent = "✨ 한 명씩 뽑기";
+      setStatus("준비되면 뽑기 버튼을 눌러 주세요!");
+    }
+
+    function applyView() {
+      classroomEl.classList.toggle("teacher", state.teacherView);
+      viewToggle.setAttribute("aria-pressed", String(state.teacherView));
+      viewToggle.textContent = state.teacherView ? "🧑‍🏫 선생님 시점" : "👀 학생 시점";
+    }
+
+    viewToggle.addEventListener("click", () => {
+      if (busy) return;
+      state.teacherView = !state.teacherView;
+      save();
+      applyView();
+      render();
+    });
+    lockToggle.addEventListener("click", () => {
+      lockMode = !lockMode;
+      lockToggle.setAttribute("aria-pressed", String(lockMode));
+      setStatus(lockMode ? "고정할 학생의 자리를 눌러 주세요. 다 했으면 모드를 꺼 주세요." : "자리 고정 모드를 껐어요.");
+    });
+    drawAllBtn.addEventListener("click", drawAll);
+    drawOneBtn.addEventListener("click", drawOne);
+    $("#resetBtn").addEventListener("click", reset);
+    $("#printBtn").addEventListener("click", () => window.print());
+
+    load();
+    applyView();
+    render();
+    setStatus(state.seats.some((n) => n !== null) ? "지난번 자리 배치를 불러왔어요." : "준비되면 뽑기 버튼을 눌러 주세요!");
+  </script>
+</body>
+</html>
