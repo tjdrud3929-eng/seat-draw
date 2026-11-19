@@ -53,7 +53,7 @@
 
     * { box-sizing: border-box; }
 
-    /* 한 화면 레이아웃: 위(제목·모드) / 가운데(교실, 남는 높이 모두) / 아래(버튼·안내) */
+    /* 한 화면 레이아웃: 위(제목·모드·자리 모양) / 가운데(교실, 남는 높이 모두) / 아래(버튼·안내) */
     html, body { height: 100%; }
     body {
       margin: 0;
@@ -65,8 +65,8 @@
     }
 
     main {
-      width: min(100%, 1000px); height: 100%; margin: 0 auto;
-      display: flex; flex-direction: column; gap: clamp(8px, 1.6vh, 14px);
+      width: min(100%, 1100px); height: 100%; margin: 0 auto;
+      display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 12px);
       text-align: center;
     }
 
@@ -81,6 +81,17 @@
       background: var(--card); color: var(--text); font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
     }
     .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .chip:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* 자리 모양 고르기 */
+    .layouts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; }
+    .layouts-label { color: var(--muted); font-size: .8rem; font-weight: 700; margin-right: 2px; }
+    .layout-chip { display: inline-flex; align-items: center; gap: 7px; }
+    .mini {
+      display: grid; gap: 1px; width: 22px; height: 16px;
+    }
+    .mini i { display: block; border-radius: 1px; background: currentColor; opacity: .75; }
+    .mini i.x { background: transparent; }
 
     .classroom {
       flex: 1; min-height: 0;
@@ -99,33 +110,38 @@
       font-size: .78rem; font-weight: 700; letter-spacing: .16em;
     }
 
-    /* 남은 공간 안에서 가장 큰 정사각형으로 자리판을 맞춤 */
+    /* 남은 공간 안에서 배치 비율을 지키며 가장 크게 맞춤.
+       --cu/--ru: 가로·세로 칸 수(통로 줄은 0.5칸으로 계산) */
     .seats-wrap {
       flex: 1; min-height: 150px;
       container-type: size;
       display: grid; place-items: center;
     }
     .seats {
-      width: min(100cqw, 100cqh); max-width: 100%; aspect-ratio: 1;
-      display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr);
-      gap: 2.2cqmin;
+      --cell: min(calc(100cqw / var(--cu)), calc(100cqh / var(--ru)));
+      width: calc(var(--cell) * var(--cu)); height: calc(var(--cell) * var(--ru));
+      display: grid;
+      gap: calc(var(--cell) * .08);
     }
+    .aisle { min-width: 0; min-height: 0; }
 
     .seat {
       position: relative; display: grid; place-items: center; min-width: 0; min-height: 0;
-      border: 2px solid var(--line); border-radius: 3cqmin;
+      border: 2px solid var(--line); border-radius: calc(var(--cell) * .16);
       background: var(--seat); color: var(--muted);
       font: inherit; padding: 0; cursor: pointer;
       transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
     }
     .seat:hover { transform: translateY(-2px); }
-    .seat .number { color: var(--accent-dark); font-size: 7cqmin; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-    .seat .empty { font-size: 5cqmin; font-weight: 800; opacity: .35; }
+    .seat .number { color: var(--accent-dark); font-size: calc(var(--cell) * .4); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .seat .empty { font-size: calc(var(--cell) * .28); font-weight: 800; opacity: .35; }
+    .seat .vacant { font-size: calc(var(--cell) * .17); font-weight: 700; opacity: .7; }
     .seat.filled { background: var(--seat-filled); border-color: transparent; }
+    .seat.is-vacant { border-style: dashed; }
     .seat.pop { animation: pop 320ms ease both; }
     .seat.rolling .number { color: var(--muted); }
     .seat.locked { background: var(--lock-bg); border-color: var(--lock); }
-    .seat.locked::after { content: "🔒"; position: absolute; top: 4%; right: 6%; font-size: 2.6cqmin; }
+    .seat.locked::after { content: "🔒"; position: absolute; top: 4%; right: 6%; font-size: calc(var(--cell) * .16); }
     .seat.next { border-color: var(--accent); border-style: dashed; }
 
     @keyframes pop {
@@ -149,7 +165,7 @@
 
     .status { min-height: 1.4em; margin: 0; color: var(--text); font-size: .92rem; font-weight: 600; }
     .help { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
-    @media (max-height: 640px) { .help { display: none; } }
+    @media (max-height: 680px) { .help { display: none; } }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -158,10 +174,9 @@
     @media print {
       html, body { height: auto; }
       body { background: #fff; padding: 0; }
-      .toolbar, .bottom { display: none; }
-      .classroom { flex: none; }
+      .toolbar, .layouts, .bottom { display: none; }
+      .classroom { flex: none; box-shadow: none; border: 0; }
       .seats-wrap { flex: none; height: 80vh; }
-      .classroom { box-shadow: none; border: 0; }
       .seat { border: 2px solid #999 !important; background: #fff !important; }
       .seat.locked::after { content: ""; }
       .seat .number { color: #000; }
@@ -178,6 +193,10 @@
       </div>
     </header>
 
+    <nav class="layouts" id="layouts" aria-label="자리 모양">
+      <span class="layouts-label">자리 모양</span>
+    </nav>
+
     <section class="classroom" id="classroom" aria-label="교실 자리 배치">
       <div class="front" id="front">칠 판 · 교 탁</div>
       <div class="seats-wrap"><div class="seats" id="seats"></div></div>
@@ -191,14 +210,58 @@
         <button class="btn secondary" id="printBtn" type="button">🖨️ 인쇄</button>
       </div>
       <p class="status" id="status" role="status" aria-live="polite"></p>
-      <p class="help">🔒 자리 고정 모드를 켜고 자리를 누르면, 그 학생은 다음 뽑기에도 그 자리에 있어요. 마지막 결과는 자동 저장돼요.</p>
+      <p class="help">자리 모양마다 결과가 따로 저장돼요. 🔒 자리 고정 모드를 켜고 자리를 누르면, 그 학생은 다음 뽑기에도 그 자리에 있어요.</p>
     </div>
   </main>
 
   <script>
-    const TOTAL = 25;
-    const COLS = 5;
-    const STORAGE_KEY = "seat-draw-v2";
+    const TOTAL = 25;           // 학생 수 (1번 ~ 25번)
+    const STORAGE_KEY = "seat-draw-v3";
+
+    // 자리 모양: S = 자리, . = 통로/빈 공간. 맨 윗줄이 칠판 쪽(앞)이에요.
+    // 자리가 25개보다 많으면 남는 자리는 '빈자리'가 돼요.
+    const LAYOUTS = [
+      {
+        id: "grid", name: "기본 5줄", desc: "한 줄에 5명씩, 5줄",
+        map: ["SSSSS", "SSSSS", "SSSSS", "SSSSS", "SSSSS"],
+      },
+      {
+        id: "pairs", name: "짝꿍", desc: "두 명씩 짝, 3분단",
+        map: ["SS.SS.SS", "SS.SS.SS", "SS.SS.SS", "SS.SS.SS", "...SS..."],
+      },
+      {
+        id: "groups", name: "모둠 (4인)", desc: "4명씩 모둠 6개, 한 모둠은 5명",
+        map: ["SS.SS.SS", "SS.SS.SS", "........", "SS.SS.SS", "SS.SS.SS", "......S."],
+      },
+      {
+        id: "ushape", name: "ㄷ자", desc: "칠판 쪽이 열린 ㄷ자 (토론·발표용)",
+        map: ["S.........S", "S.........S", "S.........S", "S.........S", "S.........S", "S.........S", "S.........S", "SSSSSSSSSSS"],
+      },
+      {
+        id: "upairs", name: "짝꿍 ㄷ자", desc: "양옆은 짝꿍끼리, 뒤는 한 줄로 앉는 ㄷ자",
+        map: ["SS.....SS", "SS.....SS", "SS.....SS", "SS.....SS", "SSSSSSSSS"],
+      },
+      {
+        id: "exam", name: "시험 대형", desc: "한 칸씩 띄어 앉기",
+        map: ["S.S.S.S.S", "S.S.S.S.S", "S.S.S.S.S", "S.S.S.S.S", "S.S.S.S.S"],
+      },
+    ];
+
+    // 배치 정보 미리 계산: 자리 위치, 통로 줄/칸(0.5칸)
+    LAYOUTS.forEach((L) => {
+      L.rows = L.map.length;
+      L.cols = L.map[0].length;
+      L.cells = [];       // {r, c, seat: 자리번호 or -1}
+      let n = 0;
+      L.map.forEach((line, r) => [...line].forEach((ch, c) => {
+        L.cells.push({ r, c, seat: ch === "S" ? n++ : -1 });
+      }));
+      L.seatCount = n;
+      L.colSizes = Array.from({ length: L.cols }, (_, c) => L.map.every((line) => line[c] !== "S") ? 0.5 : 1);
+      L.rowSizes = L.map.map((line) => line.includes("S") ? 1 : 0.5);
+      if (n < TOTAL) console.warn(`${L.name}: 자리가 ${n}개뿐이에요`);
+    });
+    const layoutById = (id) => LAYOUTS.find((L) => L.id === id) || LAYOUTS[0];
 
     const $ = (s) => document.querySelector(s);
     const seatsEl = $("#seats");
@@ -206,20 +269,37 @@
     const classroomEl = $("#classroom");
     const drawAllBtn = $("#drawAll");
     const drawOneBtn = $("#drawOne");
+    const resetBtn = $("#resetBtn");
     const lockToggle = $("#lockToggle");
     const viewToggle = $("#viewToggle");
+    const layoutsEl = $("#layouts");
 
-    // seats[i] = 학생 번호 또는 null. i는 칠판 기준(앞줄 왼쪽부터) 자리 순서
-    let state = { seats: Array(TOTAL).fill(null), locked: Array(TOTAL).fill(false), teacherView: false };
+    // 자리 값: null = 아직 안 뽑음, 0 = 빈자리, 1~25 = 학생 번호
+    let state = { layout: "grid", teacherView: false, byLayout: {} };
     let lockMode = false;
     let busy = false;
-    // 한 명씩 뽑기 진행 상황
-    let stepQueue = null;
+    let stepQueue = null;   // 한 명씩 뽑기 진행 상황
+
+    const L = () => layoutById(state.layout);
+    function cur() {
+      const lay = L();
+      let d = state.byLayout[lay.id];
+      if (!d || d.seats?.length !== lay.seatCount) {
+        d = state.byLayout[lay.id] = { seats: Array(lay.seatCount).fill(null), locked: Array(lay.seatCount).fill(false) };
+      }
+      return d;
+    }
 
     function load() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (saved && saved.seats?.length === TOTAL) state = { ...state, ...saved };
+        if (saved && saved.byLayout) { state = { ...state, ...saved }; return; }
+        // 예전 버전(5x5만 있던 때) 결과 옮겨오기
+        const old = JSON.parse(localStorage.getItem("seat-draw-v2"));
+        if (old && old.seats?.length === TOTAL) {
+          state.teacherView = !!old.teacherView;
+          state.byLayout.grid = { seats: old.seats, locked: old.locked || Array(TOTAL).fill(false) };
+        }
       } catch (e) { /* 저장 불가 환경이면 무시 */ }
     }
     function save() {
@@ -234,65 +314,133 @@
       return arr;
     }
 
-    // 화면에 그릴 자리 순서 (교사 시점이면 180도 뒤집기)
-    function displayOrder() {
-      const order = Array.from({ length: TOTAL }, (_, i) => i);
-      return state.teacherView ? order.reverse() : order;
+    function setStatus(t) { statusEl.textContent = t; }
+    const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // ---------- 자리 모양 버튼 ----------
+    function miniPreview(lay) {
+      const box = document.createElement("span");
+      box.className = "mini";
+      box.setAttribute("aria-hidden", "true");
+      box.style.gridTemplateColumns = lay.colSizes.map((s) => s + "fr").join(" ");
+      box.style.gridTemplateRows = lay.rowSizes.map((s) => s + "fr").join(" ");
+      lay.cells.forEach((cell) => {
+        const i = document.createElement("i");
+        if (cell.seat < 0) i.className = "x";
+        box.append(i);
+      });
+      return box;
+    }
+    function buildLayoutButtons() {
+      LAYOUTS.forEach((lay) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip layout-chip";
+        b.dataset.layout = lay.id;
+        b.title = lay.desc;
+        b.append(miniPreview(lay), document.createTextNode(lay.name));
+        b.addEventListener("click", () => chooseLayout(lay.id));
+        layoutsEl.append(b);
+      });
+    }
+    function syncLayoutButtons() {
+      layoutsEl.querySelectorAll(".layout-chip").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.layout === state.layout));
+        b.disabled = busy;
+      });
+    }
+    function chooseLayout(id) {
+      if (busy || id === state.layout) return;
+      state.layout = id;
+      stepQueue = null;
+      save();
+      resetButtonLabels();
+      render();
+      const lay = L();
+      const extra = lay.seatCount - TOTAL;
+      const drawn = cur().seats.some((n) => n !== null);
+      setStatus(`'${lay.name}' 모양으로 바꿨어요. ${lay.desc}${extra > 0 ? ` (빈자리 ${extra}개)` : ""}` +
+        (drawn ? " · 이 모양에서 뽑았던 결과를 불러왔어요." : ""));
     }
 
-    function render(popIndexes = []) {
-      seatsEl.replaceChildren(...displayOrder().map((i) => {
+    // ---------- 자리 그리기 ----------
+    function render(popSeats = []) {
+      const lay = L();
+      const d = cur();
+      seatsEl.style.setProperty("--cu", lay.colSizes.reduce((a, b) => a + b, 0));
+      seatsEl.style.setProperty("--ru", lay.rowSizes.reduce((a, b) => a + b, 0));
+      // 선생님 시점이면 판 전체를 180도 돌림
+      const colSizes = state.teacherView ? [...lay.colSizes].reverse() : lay.colSizes;
+      const rowSizes = state.teacherView ? [...lay.rowSizes].reverse() : lay.rowSizes;
+      seatsEl.style.gridTemplateColumns = colSizes.map((s) => s + "fr").join(" ");
+      seatsEl.style.gridTemplateRows = rowSizes.map((s) => s + "fr").join(" ");
+      const cells = state.teacherView ? [...lay.cells].reverse() : lay.cells;
+
+      seatsEl.replaceChildren(...cells.map((cell) => {
+        if (cell.seat < 0) {
+          const a = document.createElement("div");
+          a.className = "aisle";
+          return a;
+        }
+        const i = cell.seat;
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "seat";
-        const num = state.seats[i];
-        const row = Math.floor(i / COLS) + 1, col = (i % COLS) + 1;
-        if (num !== null) {
+        const num = d.seats[i];
+        const where = `앞에서 ${cell.r + 1}째 줄, 왼쪽에서 ${cell.c + 1}째 칸`;
+        if (num > 0) {
           btn.classList.add("filled");
           btn.innerHTML = `<span class="number">${num}</span>`;
-          btn.setAttribute("aria-label", `${row}줄 ${col}번째 자리, ${num}번 학생${state.locked[i] ? ", 고정됨" : ""}`);
+          btn.setAttribute("aria-label", `${where}, ${num}번 학생${d.locked[i] ? ", 고정됨" : ""}`);
+        } else if (num === 0) {
+          btn.classList.add("is-vacant");
+          btn.innerHTML = `<span class="vacant">빈자리</span>`;
+          btn.setAttribute("aria-label", `${where}, 빈자리`);
         } else {
           btn.innerHTML = `<span class="empty">?</span>`;
-          btn.setAttribute("aria-label", `${row}줄 ${col}번째 자리, 비어 있음`);
+          btn.setAttribute("aria-label", `${where}, 아직 안 뽑음`);
         }
-        if (state.locked[i]) btn.classList.add("locked");
+        if (d.locked[i]) btn.classList.add("locked");
         if (stepQueue && stepQueue.seatOrder[0] === i) btn.classList.add("next");
-        if (popIndexes.includes(i)) btn.classList.add("pop");
+        if (popSeats.includes(i)) btn.classList.add("pop");
         btn.dataset.index = i;
         btn.addEventListener("click", () => onSeatClick(i));
         return btn;
       }));
+      syncLayoutButtons();
     }
 
     function onSeatClick(i) {
       if (!lockMode || busy) return;
-      if (state.seats[i] === null) {
-        setStatus("번호가 있는 자리만 고정할 수 있어요. 먼저 뽑아 주세요!");
+      const d = cur();
+      if (!(d.seats[i] > 0)) {
+        setStatus("학생 번호가 있는 자리만 고정할 수 있어요. 먼저 뽑아 주세요!");
         return;
       }
-      state.locked[i] = !state.locked[i];
+      d.locked[i] = !d.locked[i];
       save();
       render();
-      const n = state.locked.filter(Boolean).length;
-      setStatus(state.locked[i] ? `${state.seats[i]}번 자리를 고정했어요. (고정 ${n}명)` : `${state.seats[i]}번 고정을 풀었어요. (고정 ${n}명)`);
+      const n = d.locked.filter(Boolean).length;
+      setStatus(d.locked[i] ? `${d.seats[i]}번 자리를 고정했어요. (고정 ${n}명)` : `${d.seats[i]}번 고정을 풀었어요. (고정 ${n}명)`);
     }
-
-    function setStatus(t) { statusEl.textContent = t; }
 
     function setBusy(b) {
       busy = b;
       drawAllBtn.disabled = b;
       drawOneBtn.disabled = b;
-      $("#resetBtn").disabled = b;
+      resetBtn.disabled = b;
+      syncLayoutButtons();
     }
 
-    // 고정되지 않은 자리와, 고정되지 않은 학생 목록
+    // 고정되지 않은 자리와, 그 자리에 들어갈 번호(남는 자리는 0 = 빈자리)
     function freePools() {
-      const lockedNums = new Set(state.seats.filter((n, i) => state.locked[i] && n !== null));
+      const d = cur();
+      const lockedNums = new Set(d.seats.filter((n, i) => d.locked[i] && n > 0));
       const freeSeats = [];
-      for (let i = 0; i < TOTAL; i++) if (!state.locked[i]) freeSeats.push(i);
+      d.seats.forEach((_, i) => { if (!d.locked[i]) freeSeats.push(i); });
       const freeNums = [];
       for (let n = 1; n <= TOTAL; n++) if (!lockedNums.has(n)) freeNums.push(n);
+      while (freeNums.length < freeSeats.length) freeNums.push(0);
       return { freeSeats, freeNums };
     }
 
@@ -300,27 +448,27 @@
     function drawAll() {
       if (busy) return;
       stepQueue = null;
+      const d = cur();
       const { freeSeats, freeNums } = freePools();
       const result = shuffle([...freeNums]);
       setBusy(true);
+      resetButtonLabels();
       setStatus("두구두구두구… 🥁");
 
-      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const duration = reduce ? 0 : 1600;
+      const duration = reduceMotion() ? 0 : 1600;
       const start = performance.now();
 
       function tick(now) {
         const elapsed = now - start;
         if (elapsed < duration) {
           const fake = shuffle([...freeNums]);
-          freeSeats.forEach((s, k) => (state.seats[s] = fake[k]));
+          freeSeats.forEach((s, k) => (d.seats[s] = fake[k]));
           render();
           seatsEl.querySelectorAll(".seat:not(.locked)").forEach((el) => el.classList.add("rolling"));
-          // 끝으로 갈수록 느려지게
-          const delay = 50 + (elapsed / duration) * 180;
+          const delay = 50 + (elapsed / duration) * 180;   // 끝으로 갈수록 느려지게
           setTimeout(() => requestAnimationFrame(tick), delay);
         } else {
-          freeSeats.forEach((s, k) => (state.seats[s] = result[k]));
+          freeSeats.forEach((s, k) => (d.seats[s] = result[k]));
           save();
           render(freeSeats);
           setBusy(false);
@@ -334,9 +482,10 @@
     // ✨ 한 명씩 뽑기: 앞자리부터 한 자리씩 공개
     function drawOne() {
       if (busy) return;
+      const d = cur();
       if (!stepQueue) {
         const { freeSeats, freeNums } = freePools();
-        freeSeats.forEach((s) => (state.seats[s] = null));
+        freeSeats.forEach((s) => (d.seats[s] = null));
         stepQueue = { seatOrder: freeSeats, nums: shuffle([...freeNums]), total: freeSeats.length };
         drawAllBtn.textContent = "🎲 한 번에 뽑기";
       }
@@ -344,42 +493,50 @@
       const num = stepQueue.nums.shift();
 
       setBusy(true);
-      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      let spins = reduce ? 0 : 14;
-      const pool = [...stepQueue.nums, num];
+      let spins = reduceMotion() ? 0 : 14;
+      const pool = [...stepQueue.nums, num].filter((n) => n > 0);
+      if (!pool.length) pool.push(0);
 
       function spin() {
         if (spins-- > 0) {
-          state.seats[seat] = pool[Math.floor(Math.random() * pool.length)];
+          d.seats[seat] = pool[Math.floor(Math.random() * pool.length)];
           render();
-          const el = seatsEl.querySelector(`[data-index="${seat}"]`);
-          el.classList.add("rolling");
+          seatsEl.querySelector(`[data-index="${seat}"]`)?.classList.add("rolling");
           setTimeout(spin, 60 + (14 - spins) * 8);
           return;
         }
-        state.seats[seat] = num;
-        const done = stepQueue.seatOrder.length === 0;
-        const count = stepQueue.total - stepQueue.seatOrder.length;
+        d.seats[seat] = num;
+        const left = stepQueue.seatOrder.length;
+        const count = stepQueue.total - left;
+        const total = stepQueue.total;
+        const done = left === 0;
         if (done) stepQueue = null;
         save();
         render([seat]);
         setBusy(false);
-        const row = Math.floor(seat / COLS) + 1, col = (seat % COLS) + 1;
+        const cell = L().cells.find((c) => c.seat === seat);
+        const where = `앞에서 ${cell.r + 1}째 줄 ${cell.c + 1}째 칸`;
+        const who = num > 0 ? `${num}번!` : "빈자리!";
         setStatus(done
-          ? `🎉 ${row}줄 ${col}번째 자리는 ${num}번! 모든 자리가 정해졌어요!`
-          : `${row}줄 ${col}번째 자리는… ${num}번! (${count}/${count + (stepQueue?.seatOrder.length ?? 0)})`);
+          ? `🎉 ${where}은… ${who} 모든 자리가 정해졌어요!`
+          : `${where}은… ${who} (${count}/${total})`);
         drawOneBtn.textContent = done ? "✨ 한 명씩 뽑기" : "✨ 다음 자리";
       }
       spin();
     }
 
+    function resetButtonLabels() {
+      drawAllBtn.textContent = "🎲 한 번에 뽑기";
+      drawOneBtn.textContent = "✨ 한 명씩 뽑기";
+    }
+
     function reset() {
       if (busy) return;
-      const resetBtn = $("#resetBtn");
-      if (state.seats.some((n) => n !== null) && !resetBtn.dataset.armed) {
+      const d = cur();
+      if (d.seats.some((n) => n !== null) && !resetBtn.dataset.armed) {
         resetBtn.dataset.armed = "1";
         resetBtn.textContent = "정말 지울까요?";
-        setStatus("한 번 더 누르면 자리 배치와 고정이 모두 지워져요.");
+        setStatus(`한 번 더 누르면 '${L().name}' 모양의 자리 배치와 고정이 모두 지워져요.`);
         clearTimeout(reset.timer);
         reset.timer = setTimeout(() => { delete resetBtn.dataset.armed; resetBtn.textContent = "처음으로"; }, 3000);
         return;
@@ -388,12 +545,11 @@
       delete resetBtn.dataset.armed;
       resetBtn.textContent = "처음으로";
       stepQueue = null;
-      state.seats = Array(TOTAL).fill(null);
-      state.locked = Array(TOTAL).fill(false);
+      d.seats.fill(null);
+      d.locked.fill(false);
       save();
       render();
-      drawAllBtn.textContent = "🎲 한 번에 뽑기";
-      drawOneBtn.textContent = "✨ 한 명씩 뽑기";
+      resetButtonLabels();
       setStatus("준비되면 뽑기 버튼을 눌러 주세요!");
     }
 
@@ -417,13 +573,14 @@
     });
     drawAllBtn.addEventListener("click", drawAll);
     drawOneBtn.addEventListener("click", drawOne);
-    $("#resetBtn").addEventListener("click", reset);
+    resetBtn.addEventListener("click", reset);
     $("#printBtn").addEventListener("click", () => window.print());
 
     load();
+    buildLayoutButtons();
     applyView();
     render();
-    setStatus(state.seats.some((n) => n !== null) ? "지난번 자리 배치를 불러왔어요." : "준비되면 뽑기 버튼을 눌러 주세요!");
+    setStatus(cur().seats.some((n) => n !== null) ? "지난번 자리 배치를 불러왔어요." : "자리 모양을 고르고, 뽑기 버튼을 눌러 주세요!");
   </script>
 </body>
 </html>
